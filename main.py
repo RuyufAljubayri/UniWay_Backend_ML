@@ -35,6 +35,7 @@ app.add_middleware(
 db = None
 detection_model = None
 reader = None
+models_loaded = False  # Flag to track if background initialization is complete
 
 class BookmarkPayload(BaseModel):
     roomId: str
@@ -88,13 +89,39 @@ def download_file_from_drive(file_id, output_path):
     else:
         print(f"[LOCAL] Asset {output_path} discovered in root registry. Skipping download sequence.")
 
+async def initialize_ml_models_background():
+    """تشغيل تحميل وتهيئة الموديلات الثقيلة في الخلفية لتفادي توقف البورت في السيرفر السحابي"""
+    global detection_model, reader, models_loaded
+    print("[BACKGROUND INIT] Starting heavy ML asset synchronization from Drive...")
+    
+    # Run synchronous downloads in a separate thread context to avoid blocking the loop
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, download_file_from_drive, "1EC86KnVqaDQT1ipgkWyYVwie1xU4TWVD", "best_uqu_v1.pt")
+    await loop.run_in_executor(None, download_file_from_drive, "1mmvmR4Lhp_Zc6EdFqI7PsfwXul8tYrHi", "best_accuracy.pth")
+    
+    try:
+        model_path = os.environ.get("YOLO_MODEL_PATH", "best_uqu_v1.pt")
+        if os.path.exists(model_path):
+            detection_model = YOLO(model_path)
+            print(f"[BACKGROUND INIT] YOLOv8 weight matrix loaded securely.")
+        else:
+            print(f"[BACKGROUND WARNING] Weight matrix file not found.")
+    except Exception as yolo_err:
+        print(f"[BACKGROUND CRITICAL] Spatial framework configuration locked: {str(yolo_err)}")
+
+    try:
+        reader = easyocr.Reader(['ar', 'en'], gpu=False, model_storage_directory=".", user_network_directory=".")
+        print("[BACKGROUND INIT] Bilingual EasyOCR pipelines fully generated.")
+    except Exception as ocr_err:
+        print(f"[BACKGROUND CRITICAL] Linguistic pipeline failed to compile: {str(ocr_err)}")
+        
+    models_loaded = True
+    print("[BACKGROUND INIT] All ML systems operational and active.")
+
 @app.on_event("startup")
 async def startup_event():
-    global db, detection_model, reader
+    global db
     print("[INIT] Igniting cloud resources initialization sequence...")
-    
-    download_file_from_drive("1EC86KnVqaDQT1ipgkWyYVwie1xU4TWVD", "best_uqu_v1.pt")
-    download_file_from_drive("1mmvmR4Lhp_Zc6EdFqI7PsfwXul8tYrHi", "best_accuracy.pth")
     
     try:
         cred_path = os.environ.get("FIREBASE_CREDENTIALS_PATH", "serviceAccountKey.json")
@@ -104,29 +131,23 @@ async def startup_event():
                 firebase_admin.initialize_app(cred)
                 print("[INIT] Firebase Administrative SDK bound successfully.")
             else:
-                print(f"[CRITICAL] Firebase key missing at {cred_path}. Cloud repositories will be offline.")
+                print(f"[CRITICAL] Firebase key missing at {cred_path}.")
         db = firestore.client()
     except Exception as fb_err:
         print(f"[CRITICAL] Firebase administrative handshake ruptured: {str(fb_err)}")
 
-    try:
-        model_path = os.environ.get("YOLO_MODEL_PATH", "best_uqu_v1.pt")
-        if os.path.exists(model_path):
-            detection_model = YOLO(model_path)
-            print(f"[INIT] YOLOv8 weight matrix loaded securely from: {model_path}")
-        else:
-            print(f"[WARNING] Weight matrix file not found at {model_path}. Spatial localization is offline.")
-    except Exception as yolo_err:
-        print(f"[CRITICAL] Spatial framework configuration locked: {str(yolo_err)}")
-
-    try:
-        reader = easyocr.Reader(['ar', 'en'], gpu=False, model_storage_directory=".", user_network_directory=".")
-        print("[INIT] Asynchronous bilingual EasyOCR pipelines generated with dynamic custom weights.")
-    except Exception as ocr_err:
-        print(f"[CRITICAL] Linguistic pipeline parsing arrays failed to compile: {str(ocr_err)}")
+    # Fire and forget the heavy ML downloads and setups into the async background pipeline immediately
+    asyncio.create_task(initialize_ml_models_background())
+    print("[INIT] Port binding released to Render core. Server is opening ports globally.")
 
 @app.post("/predict")
 async def predict_signage(file: UploadFile = File(...)):
+    if not models_loaded:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
+            detail="AI Core is still caching weight blocks from Google Drive in the background. Please retry in a few moments."
+        )
+        
     try:
         contents = await file.read()
         try:
