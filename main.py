@@ -6,30 +6,24 @@ import numpy as np
 from PIL import Image
 import nest_asyncio
 import cv2
+import urllib.request
 
-# FastAPI Toolkits
 from fastapi import FastAPI, Header, HTTPException, status, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-# Firebase Admin SDK
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# ML Frameworks
 from ultralytics import YOLO
 import easyocr
 
-# ===========================================================================
-# 1. CORE APPLICATION & INITIALIZATION TRACKERS
-# ===========================================================================
 app = FastAPI(
     title="UniWay Centralized Backend API",
     description="Asynchronous cloud core serving computer vision workflows and secure Firestore transaction mappings.",
     version="1.0.0"
 )
 
-# Enable Cross-Origin Resource Sharing (CORS) for Mobile Team Connectivity
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -38,23 +32,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global Instance Holders for Secure Defensive Access
 db = None
 detection_model = None
 reader = None
 
-# Custom Pydantic Models for Data Validation
 class BookmarkPayload(BaseModel):
     roomId: str
 
-# Helper functions for text normalization and constraints
 def normalize_ml_text(text: str) -> str:
     if not text:
         return ""
     text = str(text).strip().lower()
     text = text.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
     text = text.replace("ة", "ه").replace("ى", "ي")
-    text = text.replace(" ", "").replace("\t", "").replace("\n", "")
+    text = text.replace(" ", "").replace("\\t", "").replace("\\n", "")
     return text
 
 def enforce_uqu_room_constraints(digits: str) -> str:
@@ -85,15 +76,26 @@ def your_custom_preprocessing_pipeline(pil_img):
     except Exception:
         return None
 
-# ===========================================================================
-# 2. LIFESPAN RESOURCE INITIALIZATION TRACK (Render & Local Compliant)
-# ===========================================================================
+def download_file_from_drive(file_id, output_path):
+    if not os.path.exists(output_path):
+        print(f"[DOWNLOAD] Asset {output_path} not found locally. Fetching from Google Drive cloud core...")
+        url = f"https://docs.google.com/uc?export=download&id={file_id}&confirm=t"
+        try:
+            urllib.request.urlretrieve(url, output_path)
+            print(f"[DOWNLOAD] Success! Asset {output_path} synchronized securely.")
+        except Exception as e:
+            print(f"[CRITICAL] Download failed for asset {output_path}: {str(e)}")
+    else:
+        print(f"[LOCAL] Asset {output_path} discovered in root registry. Skipping download sequence.")
+
 @app.on_event("startup")
 async def startup_event():
     global db, detection_model, reader
     print("[INIT] Igniting cloud resources initialization sequence...")
     
-    # A. Firebase Initialization Architecture
+    download_file_from_drive("1EC86KnVqaDQT1ipgkWyYVwie1xU4TWVD", "best_uqu_v1.pt")
+    download_file_from_drive("1mmvmR4Lhp_Zc6EdFqI7PsfwXul8tYrHi", "best_accuracy.pth")
+    
     try:
         cred_path = os.environ.get("FIREBASE_CREDENTIALS_PATH", "serviceAccountKey.json")
         if not firebase_admin._apps:
@@ -107,7 +109,6 @@ async def startup_event():
     except Exception as fb_err:
         print(f"[CRITICAL] Firebase administrative handshake ruptured: {str(fb_err)}")
 
-    # B. YOLOv8 Model Layer Allocation with Custom Weights
     try:
         model_path = os.environ.get("YOLO_MODEL_PATH", "best_uqu_v1.pt")
         if os.path.exists(model_path):
@@ -118,16 +119,12 @@ async def startup_event():
     except Exception as yolo_err:
         print(f"[CRITICAL] Spatial framework configuration locked: {str(yolo_err)}")
 
-    # C. Bilingual OCR Thread Spawning with Enhanced Custom Accuracy Weights
     try:
         reader = easyocr.Reader(['ar', 'en'], gpu=False, model_storage_directory=".", user_network_directory=".")
         print("[INIT] Asynchronous bilingual EasyOCR pipelines generated with dynamic custom weights.")
     except Exception as ocr_err:
         print(f"[CRITICAL] Linguistic pipeline parsing arrays failed to compile: {str(ocr_err)}")
 
-# ===========================================================================
-# 3. MACHINE LEARNING INFERENCE ENDPOINT (/predict)
-# ===========================================================================
 @app.post("/predict")
 async def predict_signage(file: UploadFile = File(...)):
     try:
@@ -250,9 +247,6 @@ async def predict_signage(file: UploadFile = File(...)):
     except Exception as e:
         return {"status": "error", "error_code": "SERVER_ERROR", "message": str(e)}
 
-# ===========================================================================
-# 4. UNIFIED SEARCH & NAVIGATION ENDPOINT (/classrooms/search)
-# ===========================================================================
 @app.get("/classrooms/search")
 async def search_classrooms(query: str):
     if not query:
@@ -292,9 +286,6 @@ async def search_classrooms(query: str):
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Search pipeline operational error: {str(e)}")
 
-# ===========================================================================
-# 5. USER ISOLATED CLOUD REPOSITORIES (/bookmarks)
-# ===========================================================================
 @app.get("/bookmarks/my")
 async def fetch_my_bookmarks(x_device_id: str = Header(None, alias="x-device-id")):
     if not x_device_id:
