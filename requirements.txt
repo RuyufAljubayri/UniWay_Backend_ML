@@ -1,0 +1,11 @@
+fastapi==0.110.0
+uvicorn==0.28.0
+ultralytics==8.1.0
+python-multipart==0.0.9
+nest-asyncio==1.6.0
+pyngrok==7.1.2
+easyocr==1.7.1
+firebase-admin==6.5.0
+opencv-python-headless==4.9.0.80
+numpy==1.26.4
+Pillow==10.2.0
