@@ -1,13 +1,13 @@
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.2.1+cpu
-torchvision==0.17.1+cpu
-fastapi
-uvicorn
-pydantic
-firebase-admin
-ultralytics
-easyocr
-numpy
-Pillow>=10.0.0
-opencv-python-headless
-nest_asyncio
+torch==2.1.2
+torchvision==0.16.2
+ultralytics==8.1.0
+easyocr==1.7.1
+fastapi==0.109.0
+uvicorn==0.27.0
+pydantic==2.6.1
+firebase-admin==6.4.0
+numpy==1.26.4
+opencv-python-headless==4.9.0.80
+Pillow==10.2.0
+nest-asyncio==1.6.0
+python-multipart==0.0.9
