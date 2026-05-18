@@ -15,7 +15,7 @@ The following URLs represent the active production endpoints for integrating the
 
 #### 2. Location Search Engine (GET)
 * **Description:** Used in the Search screen to query classrooms natively across all buildings.
-* **URL:** `https://rayouf0-uniway-backend-core.hf.space/classrooms/search?query=ROOM_ID`
+* **URL:** `https://rayouf0-uniway-backend-core.hf.space/classrooms/search?query=CLASS_ID`
 
 #### 3. Fetch Device Bookmarks (GET)
 * **Description:** Used in the Saved Routes/Bookmarks dashboard to retrieve the user's saved locations.
@@ -28,5 +28,5 @@ The following URLs represent the active production endpoints for integrating the
 * **Header:** `x-device-id`: `YOUR_DEVICE_TOKEN`
 * **Body (JSON):** ```json
 {
-    "roomId": "ROOM_ID"
+    "roomId": "CLASS_ID"
 }
