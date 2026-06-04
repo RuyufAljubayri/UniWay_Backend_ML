@@ -1,6 +1,7 @@
 import io
 import os
 import sys
+import json
 import asyncio
 import numpy as np
 from PIL import Image
@@ -112,14 +113,26 @@ async def startup_event():
     import urllib.request
         
     try:
-        cred_path = os.environ.get("FIREBASE_CREDENTIALS_PATH", "serviceAccountKey.json")
         if not firebase_admin._apps:
-            if os.path.exists(cred_path):
-                cred = credentials.Certificate(cred_path)
+            # محاولة القراءة الآمنة من متغيرات البيئة في هاقينق فيس أولاً
+            firebase_secret = os.environ.get("FIREBASE_KEY")
+            
+            if firebase_secret:
+                print("[INIT] Detecting production secrets environment variable...")
+                cred_dict = json.loads(firebase_secret)
+                cred = credentials.Certificate(cred_dict)
                 firebase_admin.initialize_app(cred)
-                print("[INIT] Firebase Administrative SDK bound successfully.")
+                print("[INIT] Firebase Administrative SDK bound successfully via Production Secrets.")
             else:
-                print(f"[CRITICAL] Firebase key missing at {cred_path}. Cloud repositories will be offline.")
+                # النظام الاحتياطي للملف المحلي في حال التجربة المحلية
+                cred_path = os.environ.get("FIREBASE_CREDENTIALS_PATH", "serviceAccountKey.json")
+                if os.path.exists(cred_path):
+                    cred = credentials.Certificate(cred_path)
+                    firebase_admin.initialize_app(cred)
+                    print(f"[INIT] Firebase Administrative SDK bound successfully via local file: {cred_path}")
+                else:
+                    print(f"[CRITICAL] Firebase key missing at environment variables and local path. Cloud repositories will be offline.")
+        
         db = firestore.client()
     except Exception as fb_err:
         print(f"[CRITICAL] Firebase administrative handshake ruptured: {str(fb_err)}")
